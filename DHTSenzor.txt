@@ -1,0 +1,64 @@
+#include <SPI.h>
+#include <Ethernet.h>
+#include <DHT.h>
+
+byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
+IPAddress ip(192, 168, 8, 123);
+EthernetServer server(80);
+
+#define DHTPIN 2          
+#define DHTTYPE DHT11     
+
+DHT dht(DHTPIN, DHTTYPE);
+
+void setup() {
+  Serial.begin(9600);
+  while (!Serial) {
+    ; 
+  }
+
+  Serial.println("Dodeljivanje IP adrese Ethernet Shield-u...");
+  Ethernet.begin(mac, ip);
+
+  Serial.print("IP adresa Ethernet Shield-a: ");
+  Serial.println(Ethernet.localIP());
+
+  server.begin();
+}
+
+void loop() {
+  EthernetClient client = server.available();
+
+  if (client) {
+    Serial.println("Novi klijent.");
+    String message = "";
+
+    while (client.connected()) {
+      if (client.available()) {
+        char c = client.read();
+       
+          float temp = dht.readTemperature();
+          float hum = dht.readHumidity();
+          client.println("HTTP/1.1 200 OK");
+          client.println("Content-Type: text/html");
+          client.println();
+          client.println("<html>");
+          client.println("<head><title>Vrednosti sa DHT11 senzora</title></head>");
+          client.println("<body>");
+          client.print("<p>Temperatura: ");
+          client.print(temp);
+          client.println(" &deg;C</p>");
+          client.print("<p>Vlaznost: ");
+          client.print(hum);
+          client.println(" %</p>");
+          client.println("</body>");
+          client.println("</html>");
+          break;
+
+      }
+    }
+
+    delay(1);
+    client.stop();
+  }
+}
